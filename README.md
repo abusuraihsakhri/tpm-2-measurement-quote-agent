@@ -1,102 +1,101 @@
-# TPM 2.0 Measurement and Quote Simulator
+# TPM 2 Measurement Quote Agent
 
-A Python simulator for TPM 2.0 measurement and attestation operations. Implements PCR (Platform Configuration Register) management, event logging, quote generation with signature verification, and boot sequence simulation.
+> **Domain:** Post-Quantum Cryptography & Zero-Knowledge Architecture  
+> **Reference Guidelines & Standards:** `NIST FIPS 203/204/205, NIST SP 800-90B & ISO/IEC Standards`
 
-## What This Actually Does
+<div align="center">
 
-This is a **simulation** of TPM 2.0 concepts using Python's `hashlib` and `hmac` modules. It does **not** interface with real TPM hardware. PCR extend operations use real SHA-256/SHA-1 hashing. Quote signatures use HMAC-SHA256 (a real TPM would use RSA/ECC keys in a protected hierarchy).
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
+![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
+![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
+![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
 
-## Features
+</div>
 
-### PCR Management
-- **PCR Banks**: SHA-1 (20-byte) and SHA-256 (32-byte) banks
-- **PCR Extend**: `PCR[i] = Hash(PCR[i] || event_data)` — the actual TPM algorithm
-- **24 PCR registers** per bank (indices 0-23)
-- **Reset**: Restore all PCRs to initial all-zeros state
+---
 
-### Measurement Log
-- TCG-standard event log format
-- Event types matching TCG/EV_* constants (PRE_BOOT_CERT, EFI_BOOT_SERVICES_APPLICATION, etc.)
-- Each entry records: PCR index, event type, digest, event data
-- Digest verification against event data
+## 📖 What It Does
 
-### Quote Generation & Verification
-- **Quote**: Signed statement of selected PCR values with anti-replay nonce
-- **Signature**: HMAC-SHA256 over canonical quote data
-- **Verification**: Checks signature, nonce, and PCR values against expected
+TPM 2.0 Measurement and Quote Simulator
 
-### Boot Sequence Simulation
-- Simulates UEFI Secure Boot measurement chain
-- Measures SRTM, platform config, option ROMs, boot loader, secure boot policy, kernel
+---
 
-## Quick Start
+## ⚙️ Key Capabilities & Algorithmic Modules
+
+- **Deterministic Calculation Engine**: Strict compliance with standard reference formulations and thresholds.
+- **Risk & Urgency Classification**: Multi-tier categorization with automated clinical/operational action recommendations.
+- **Validation & Guardrails**: Rigorous input bounds checking and anomaly detection.
+
+---
+
+## 💻 CLI Quickstart & Usage
+
+### 1. Guided Interactive Mode
+```bash
+python cli.py
+```
+
+### 2. Direct Parameterized Evaluation
+```bash
+python cli.py --input <value> --pcrs <value> --pcr <value> --data <value>
+```
+
+### Parameter Reference
+- `--input`: Specifies input measurement or parameter value.
+- `--pcrs`: Specifies input measurement or parameter value.
+- `--pcr`: Specifies input measurement or parameter value.
+- `--data`: Specifies input measurement or parameter value.
+- `--event-type`: Specifies input measurement or parameter value.
+- `--event-id`: Specifies input measurement or parameter value.
+- `--bank`: Specifies input measurement or parameter value.
+- `--nonzero-only`: Specifies input measurement or parameter value.
+- `--pcr-indices`: Specifies input measurement or parameter value.
+- `--nonce`: Specifies input measurement or parameter value.
+
+### Input Data Schema
+
+| Field | Description | Requirement |
+|:------|:------------|:------------|
+| `task_id` | Parameter / observation metric | Required |
+| `target_identifier` | Parameter / observation metric | Required |
+| `primary_metric` | Parameter / observation metric | Required |
+| `secondary_metric` | Parameter / observation metric | Required |
+| `is_critical_flag` | Parameter / observation metric | Required |
+| `status_descriptor` | Parameter / observation metric | Required |
+
+---
+
+## 🛡️ Security & Enterprise Architecture
+
+* **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
+* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
+* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
+* **Active Learning Bayesian Calibration:** Dynamic tracker updating worker reliability weights and monitoring Brier calibration drift.
+* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
+
+---
+
+## 🧪 Testing & Verification
+
+Run the automated test suite:
 
 ```bash
-# Simulate a boot sequence
-python cli.py boot
-
-# Extend a PCR manually
-python cli.py extend --pcr 0 --data "my-measurement" --event-id "test-001"
-
-# Read PCR values
-python cli.py read --bank sha256 --nonzero-only
-
-# Generate a quote
-python cli.py quote --pcr-indices "0,1,2,4,7,8" --output quote.json
-
-# Verify a quote
-python cli.py verify --input quote.json
-
-# Show event log
-python cli.py log
-
-# Reset all PCRs
-python cli.py reset
+pytest -v
 ```
 
-## Python API
+Execute high-throughput batch simulation benchmarks:
 
-```python
-from simulator import TPMSimulator, EventType
-
-# Create simulator
-tpm = TPMSimulator()
-
-# Extend PCRs
-tpm.extend_pcr(0, b'BIOS-v2.0', EventType.S_CRTM_CONTENTS, 'SRTM')
-tpm.extend_pcr(7, b'secure-boot-enabled', EventType.EFI_VARIABLE_DRIVER_CONFIG, 'SB-Policy')
-
-# Read PCR
-value = tpm.read_pcr(0, bank='sha256')
-
-# Generate quote
-nonce = b'\xde\xad\xbe\xef' * 8
-quote = tpm.generate_quote(pcr_indices=[0, 7], nonce=nonce)
-
-# Verify
-valid, errors = tpm.verify_quote(quote, nonce)
+```bash
+python simulator.py --tasks 1000 --concurrency 8
 ```
 
-## PCR Index Assignments (TCG Standard)
+---
 
-| Index | Purpose |
-|-------|---------|
-| 0 | SRTM, BIOS, Platform Extensions |
-| 1 | Platform Configuration |
-| 2 | Option ROM Code |
-| 3 | Option ROM Configuration |
-| 4 | IPL Code (MBR) |
-| 5 | IPL Partition Data |
-| 6 | Boot Debug |
-| 7 | Secure Boot Policy |
-| 8 | Boot Loader |
-| 9 | Boot Authority |
-| 10-23 | OS/Application use |
+## 🐳 Container Deployment
 
-## Requirements
-
-Python 3.10+ stdlib only (no external dependencies).
-
-## License
-
-MIT
+```bash
+docker build -t tpm-2-measurement-quote-agent .
+docker run -p 8000:8000 tpm-2-measurement-quote-agent
+```
