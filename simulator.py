@@ -353,8 +353,17 @@ class TPMSimulator:
         The signed data format:
             TPM2_QUOTE_INFO = "QUOT" || pcr_bank || pcr_indices || pcr_values || nonce
         """
+        if bank not in self.pcr_banks:
+            raise ValueError(f"Unknown PCR bank: {bank!r}. Valid: {list(self.pcr_banks)}")
+        if not pcr_indices:
+            raise ValueError("At least one PCR index required for quote")
+        for idx in pcr_indices:
+            if not 0 <= idx < self.num_pcrs:
+                raise IndexError(f"PCR index {idx} out of range [0, {self.num_pcrs})")
         if nonce is None:
             nonce = secrets.token_bytes(32)
+        if len(nonce) < 16:
+            raise ValueError("Nonce must be at least 16 bytes for anti-replay security")
 
         pcr_values = self.pcr_banks[bank].read_selected(pcr_indices)
 
@@ -397,8 +406,8 @@ class TPMSimulator:
         """
         errors = []
 
-        # 1. Verify nonce
-        if quote.nonce != expected_nonce:
+        # 1. Verify nonce (constant-time comparison to prevent timing attacks)
+        if not hmac.compare_digest(quote.nonce, expected_nonce):
             errors.append("Nonce mismatch: possible replay attack")
 
         # 2. Verify signature

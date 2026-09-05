@@ -1,101 +1,144 @@
 # TPM 2 Measurement Quote Agent
 
-> **Domain:** Post-Quantum Cryptography & Zero-Knowledge Architecture  
-> **Reference Guidelines & Standards:** `NIST FIPS 203/204/205, NIST SP 800-90B & ISO/IEC Standards`
+> **Domain:** Hardware Security & Trusted Platform Module Simulation
+> **Standard:** TCG TPM 2.0 Library Specification
 
 <div align="center">
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
-![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
-![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB.svg?logo=python&logoColor=white)
 
 </div>
 
 ---
 
-## 📖 What It Does
+## Overview
 
-TPM 2.0 Measurement and Quote Simulator
+A Python-based TPM 2.0 measurement and quote simulation framework. This project provides:
+
+- **PCR (Platform Configuration Register) Simulation**: SHA-1 and SHA-256 PCR banks with extend operations
+- **Measurement Event Log**: Tamper-evident logging of all PCR extensions
+- **Quote Generation & Verification**: HMAC-signed PCR quotes with anti-replay nonces
+- **Boot Sequence Simulation**: Realistic UEFI boot measurement workflow
+- **Multi-Agent Audit System**: Coordinated security assessment with specialized sub-agents
+- **Enrichment Suite**: Domain-specific verification engines for TPM 2.0 operations
 
 ---
 
-## ⚙️ Key Capabilities & Algorithmic Modules
+## Installation
 
-- **Deterministic Calculation Engine**: Strict compliance with standard reference formulations and thresholds.
-- **Risk & Urgency Classification**: Multi-tier categorization with automated clinical/operational action recommendations.
-- **Validation & Guardrails**: Rigorous input bounds checking and anomaly detection.
-
----
-
-## 💻 CLI Quickstart & Usage
-
-### 1. Guided Interactive Mode
 ```bash
-python cli.py
+# Clone the repository
+git clone https://github.com/abusuraihsakhri/tpm-2-measurement-quote-agent.git
+cd tpm-2-measurement-quote-agent
+
+# Install dependencies (Python 3.9+ required)
+pip install -e .
+
+# Optional: Install FastAPI/uvicorn for REST API server
+pip install fastapi uvicorn
 ```
 
-### 2. Direct Parameterized Evaluation
+---
+
+## Usage
+
+### TPM Simulator CLI
+
 ```bash
-python cli.py --input <value> --pcrs <value> --pcr <value> --data <value>
+# Simulate a UEFI boot sequence
+python cli.py boot
+
+# Extend a PCR with event data
+python cli.py extend --pcr 0 --data "firmware-v1.0"
+
+# Read PCR values
+python cli.py read --pcr 0 --bank sha256
+
+# Generate a TPM quote
+python cli.py quote --pcr-indices "0,1,7" --nonce "aabbccdd" --output quote.json
+
+# Verify a quote
+python cli.py verify --input quote.json --nonce "aabbccdd"
+
+# View measurement event log
+python cli.py log
+
+# Reset all PCRs
+python cli.py reset
 ```
 
-### Parameter Reference
-- `--input`: Specifies input measurement or parameter value.
-- `--pcrs`: Specifies input measurement or parameter value.
-- `--pcr`: Specifies input measurement or parameter value.
-- `--data`: Specifies input measurement or parameter value.
-- `--event-type`: Specifies input measurement or parameter value.
-- `--event-id`: Specifies input measurement or parameter value.
-- `--bank`: Specifies input measurement or parameter value.
-- `--nonzero-only`: Specifies input measurement or parameter value.
-- `--pcr-indices`: Specifies input measurement or parameter value.
-- `--nonce`: Specifies input measurement or parameter value.
-
-### Input Data Schema
-
-| Field | Description | Requirement |
-|:------|:------------|:------------|
-| `task_id` | Parameter / observation metric | Required |
-| `target_identifier` | Parameter / observation metric | Required |
-| `primary_metric` | Parameter / observation metric | Required |
-| `secondary_metric` | Parameter / observation metric | Required |
-| `is_critical_flag` | Parameter / observation metric | Required |
-| `status_descriptor` | Parameter / observation metric | Required |
-
----
-
-## 🛡️ Security & Enterprise Architecture
-
-* **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
-* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
-* **Active Learning Bayesian Calibration:** Dynamic tracker updating worker reliability weights and monitoring Brier calibration drift.
-* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
-
----
-
-## 🧪 Testing & Verification
-
-Run the automated test suite:
+### Audit Supervisor CLI
 
 ```bash
+# Run a single task audit
+python -m tpm2_attestation.cli audit --task-id TASK-001 --primary 28.4 --secondary 14.2 --critical --status DISCORDANT
+
+# Query the supervisory system
+python -m tpm2_attestation.cli chat "What standard is applied?"
+
+# Batch process from CSV
+python -m tpm2_attestation.cli batch -i sample.csv -o results.csv
+
+# Launch REST API server
+python -m tpm2_attestation.cli serve --host 127.0.0.1 --port 8000
+```
+
+### REST API Endpoints
+
+| Endpoint | Method | Description |
+|:---------|:-------|:------------|
+| `/health` | GET | System health check |
+| `/api/audit` | POST | Submit task for audit evaluation |
+| `/api/chat` | POST | Query supervisory system |
+
+---
+
+## Architecture
+
+```
+tpm-2-measurement-quote-agent/
+├── simulator.py              # Core TPM 2.0 simulation engine
+├── cli.py                    # TPM simulator CLI
+├── enrichment.py             # Domain-specific verification engines
+├── tpm2_attestation/         # Audit supervisor package
+│   ├── models.py             # Data models (FrontierPayload, Alerts)
+│   ├── engine.py             # Core evaluation engine
+│   ├── agents.py             # Specialized audit sub-agents
+│   ├── cli.py                # Audit supervisor CLI
+│   └── server.py             # FastAPI REST server
+├── tests/                    # Test suite
+│   ├── test_tpm_2_measurement_quote_agent.py
+│   ├── test_tpm2_attestation.py
+│   └── test_enrichment.py
+└── sample.csv                # Sample batch input data
+```
+
+---
+
+## Security Features
+
+- **Constant-time nonce comparison** to prevent timing attacks on quote verification
+- **Input validation** on PCR indices, bank names, and nonce lengths
+- **HMAC-SHA256 signing** for attestation key operations
+- **Anti-replay protection** via cryptographically random nonces
+
+---
+
+## Testing
+
+```bash
+# Run full test suite
 pytest -v
-```
 
-Execute high-throughput batch simulation benchmarks:
-
-```bash
-python simulator.py --tasks 1000 --concurrency 8
+# Run specific test modules
+pytest tests/test_tpm_2_measurement_quote_agent.py -v
+pytest tests/test_tpm2_attestation.py -v
+pytest tests/test_enrichment.py -v
 ```
 
 ---
 
-## 🐳 Container Deployment
+## License
 
-```bash
-docker build -t tpm-2-measurement-quote-agent .
-docker run -p 8000:8000 tpm-2-measurement-quote-agent
-```
+MIT License - see [LICENSE](LICENSE) for details.

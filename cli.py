@@ -25,7 +25,13 @@ def _get_sim(args):
 def cmd_extend(args):
     """Extend a PCR with event data."""
     sim = _get_sim(args)
-    event_data = args.data.encode() if isinstance(args.data, str) else args.data.encode()
+    if not isinstance(args.data, str) or not args.data:
+        print("Error: --data must be a non-empty string", file=sys.stderr)
+        return 1
+    if not 0 <= args.pcr < sim.num_pcrs:
+        print(f"Error: PCR index {args.pcr} out of range [0, {sim.num_pcrs})", file=sys.stderr)
+        return 1
+    event_data = args.data.encode('utf-8')
     event_type = int(args.event_type, 0) if args.event_type else EventType.ACTION
 
     results = sim.extend_pcr(

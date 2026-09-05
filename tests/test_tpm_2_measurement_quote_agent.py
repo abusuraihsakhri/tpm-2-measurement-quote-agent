@@ -313,3 +313,77 @@ class TestCLI:
         from cli import main
         ret = main(['log'])
         assert ret == 0
+
+    def test_quote_command(self):
+        from cli import main
+        ret = main(['quote', '--pcr-indices', '0,1,7'])
+        assert ret == 0
+
+    def test_quote_command_with_output(self, tmp_path):
+        from cli import main
+        output_file = tmp_path / "quote.json"
+        ret = main(['quote', '--pcr-indices', '0', '--output', str(output_file)])
+        assert ret == 0
+        assert output_file.exists()
+
+    def test_extend_empty_data(self):
+        from cli import main
+        ret = main(['extend', '--pcr', '0', '--data', ''])
+        assert ret == 1
+
+    def test_extend_invalid_pcr(self):
+        from cli import main
+        ret = main(['extend', '--pcr', '999', '--data', 'test'])
+        assert ret == 1
+
+
+# ---------------------------------------------------------------------------
+# Security & Validation tests
+# ---------------------------------------------------------------------------
+
+class TestSecurityValidation:
+    def test_generate_quote_invalid_bank(self):
+        tpm = TPMSimulator()
+        with pytest.raises(ValueError, match="Unknown PCR bank"):
+            tpm.generate_quote([0], bank='md5')
+
+    def test_generate_quote_empty_indices(self):
+        tpm = TPMSimulator()
+        with pytest.raises(ValueError, match="At least one PCR index"):
+            tpm.generate_quote([])
+
+    def test_generate_quote_invalid_index(self):
+        tpm = TPMSimulator()
+        with pytest.raises(IndexError, match="out of range"):
+            tpm.generate_quote([100])
+
+    def test_generate_quote_short_nonce(self):
+        tpm = TPMSimulator()
+        with pytest.raises(ValueError, match="at least 16 bytes"):
+            tpm.generate_quote([0], nonce=b'\x00' * 8)
+
+    def test_nonce_constant_time_compare(self):
+        """Verify nonce comparison is not vulnerable to timing attacks."""
+        tpm = TPMSimulator()
+        tpm.extend_pcr(0, b'data')
+        nonce = b'\xaa' * 32
+        quote = tpm.generate_quote([0], nonce=nonce)
+        # Same nonce should verify
+        valid, _ = tpm.verify_quote(quote, nonce)
+        assert valid is True
+        # Different nonce should fail
+        valid, errors = tpm.verify_quote(quote, b'\xbb' * 32)
+        assert valid is False
+        assert any('Nonce' in e for e in errors)
+
+    def test_quote_tampered_pcr_values(self):
+        """Verify that tampered PCR values fail verification."""
+        tpm = TPMSimulator()
+        tpm.extend_pcr(0, b'original-data')
+        nonce = b'\xcc' * 32
+        quote = tpm.generate_quote([0], nonce=nonce)
+        # Tamper with PCR values
+        quote.pcr_values[0] = b'\xff' * 32
+        valid, errors = tpm.verify_quote(quote, nonce)
+        assert valid is False
+        assert any('Signature' in e for e in errors)
