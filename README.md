@@ -1,144 +1,67 @@
-# TPM 2 Measurement Quote Agent
+# TPM 2.0 Measurement & Quote Simulator
 
-> **Domain:** Hardware Security & Trusted Platform Module Simulation
-> **Standard:** TCG TPM 2.0 Library Specification
+Educational tools for PCR measurements, event logs, and HMAC-based quote demonstrations. **Not a hardware TPM attestation verifier.** Simulated quotes are not the TCG TPM2_Quote binary structure and do not establish device identity or a chain of trust.
 
-<div align="center">
+## Browser demo
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB.svg?logo=python&logoColor=white)
-
-</div>
-
----
-
-## Overview
-
-A Python-based TPM 2.0 measurement and quote simulation framework. This project provides:
-
-- **PCR (Platform Configuration Register) Simulation**: SHA-1 and SHA-256 PCR banks with extend operations
-- **Measurement Event Log**: Tamper-evident logging of all PCR extensions
-- **Quote Generation & Verification**: HMAC-signed PCR quotes with anti-replay nonces
-- **Boot Sequence Simulation**: Realistic UEFI boot measurement workflow
-- **Multi-Agent Audit System**: Coordinated security assessment with specialized sub-agents
-- **Enrichment Suite**: Domain-specific verification engines for TPM 2.0 operations
-
----
-
-## Installation
+The standalone [web/index.html](web/index.html) implements software SHA-1/SHA-256 PCR extension, sample UEFI measurements, in-session quote signing/checking with Web Crypto, nonce comparison, and JSON download/import. No backend, tracking scripts or data uploads are used.
 
 ```bash
-# Clone the repository
+python -m http.server 8000 --directory web
+# Visit http://localhost:8000
+```
+
+The key is session-local and lost on refresh; a previously exported quote cannot be verified after reload. The Pages deployment workflow publishes the `web/` directory when the repository's Pages configuration permits it. This browser app uses JavaScript/Web Crypto rather than Pyodide.
+
+## Python setup
+
+```bash
 git clone https://github.com/abusuraihsakhri/tpm-2-measurement-quote-agent.git
 cd tpm-2-measurement-quote-agent
-
-# Install dependencies (Python 3.9+ required)
-pip install -e .
-
-# Optional: Install FastAPI/uvicorn for REST API server
-pip install fastapi uvicorn
+python -m pip install -e ".[server,test]"
+python -m pytest -q
 ```
 
----
+The standard-library simulator also works with `pip install -e .` alone. Python 3.9+ is supported by the package metadata; CI tests 3.10–3.12.
 
-## Usage
-
-### TPM Simulator CLI
+## Simulator CLI
 
 ```bash
-# Simulate a UEFI boot sequence
 python cli.py boot
-
-# Extend a PCR with event data
-python cli.py extend --pcr 0 --data "firmware-v1.0"
-
-# Read PCR values
-python cli.py read --pcr 0 --bank sha256
-
-# Generate a TPM quote
-python cli.py quote --pcr-indices "0,1,7" --nonce "aabbccdd" --output quote.json
-
-# Verify a quote
-python cli.py verify --input quote.json --nonce "aabbccdd"
-
-# View measurement event log
+python cli.py extend --pcr 0 --data firmware-v1
+python cli.py read --bank sha256
 python cli.py log
-
-# Reset all PCRs
-python cli.py reset
+python cli.py quote --pcr-indices 0,1,7 --nonce 00112233445566778899aabbccddeeff --key-file local-demo.key --output quote.json
+python cli.py verify --input quote.json --nonce 00112233445566778899aabbccddeeff --key-file local-demo.key
 ```
 
-### Audit Supervisor CLI
+A new in-memory TPM is created for each command. The `extend` command therefore does not persist state into later `read`, `log` or `quote` invocations. Import `TPMSimulator` from `simulator.py` to perform a multi-step measurement workflow in one Python process.
+
+The simulator uses `Hash(previous_PCR || Hash(event_data))` for PCR extension. The quote CLI uses a locally protected 32-byte HMAC secret; treat the `--key-file` as sensitive and never commit it. The verifier must independently supply a fresh challenge nonce. The timestamp is informational, not a signed freshness guarantee.
+
+## Rule-based API
+
+The separate `agents/` and `tpm2_attestation/` packages implement simple numeric threshold and descriptor rules; they **do not parse and validate actual hardware TPM quotes**, PCR event logs or AK certificate chains. Chat responses are mocked.
 
 ```bash
-# Run a single task audit
-python -m tpm2_attestation.cli audit --task-id TASK-001 --primary 28.4 --secondary 14.2 --critical --status DISCORDANT
-
-# Query the supervisory system
-python -m tpm2_attestation.cli chat "What standard is applied?"
-
-# Batch process from CSV
-python -m tpm2_attestation.cli batch -i sample.csv -o results.csv
-
-# Launch REST API server
-python -m tpm2_attestation.cli serve --host 127.0.0.1 --port 8000
+python -m uvicorn agents.api:app --host 127.0.0.1 --port 8000
+# or: docker compose up --build
 ```
 
-### REST API Endpoints
+The API exposes `/health`, `/metrics`, `/api/audit`, `/api/chat` and `/api/audit/logs`. The alternative `tpm2_attestation` CLI supports `audit`, `chat`, `batch` and `serve`.
 
-| Endpoint | Method | Description |
-|:---------|:-------|:------------|
-| `/health` | GET | System health check |
-| `/api/audit` | POST | Submit task for audit evaluation |
-| `/api/chat` | POST | Query supervisory system |
+The API has no authentication or persistent storage. Keep it on trusted local networks. The audit trail is held in memory and uses a process-generated secret unless `AUDIT_SECRET_KEY` is provided. Its pattern-based identifier check does not guarantee de-identification or regulatory compliance.
 
----
-
-## Architecture
-
-```
-tpm-2-measurement-quote-agent/
-├── simulator.py              # Core TPM 2.0 simulation engine
-├── cli.py                    # TPM simulator CLI
-├── enrichment.py             # Domain-specific verification engines
-├── tpm2_attestation/         # Audit supervisor package
-│   ├── models.py             # Data models (FrontierPayload, Alerts)
-│   ├── engine.py             # Core evaluation engine
-│   ├── agents.py             # Specialized audit sub-agents
-│   ├── cli.py                # Audit supervisor CLI
-│   └── server.py             # FastAPI REST server
-├── tests/                    # Test suite
-│   ├── test_tpm_2_measurement_quote_agent.py
-│   ├── test_tpm2_attestation.py
-│   └── test_enrichment.py
-└── sample.csv                # Sample batch input data
-```
-
----
-
-## Security Features
-
-- **Constant-time nonce comparison** to prevent timing attacks on quote verification
-- **Input validation** on PCR indices, bank names, and nonce lengths
-- **HMAC-SHA256 signing** for attestation key operations
-- **Anti-replay protection** via cryptographically random nonces
-
----
-
-## Testing
+## Verification and privacy
 
 ```bash
-# Run full test suite
-pytest -v
-
-# Run specific test modules
-pytest tests/test_tpm_2_measurement_quote_agent.py -v
-pytest tests/test_tpm2_attestation.py -v
-pytest tests/test_enrichment.py -v
+python -m pip check
+python -m pytest -q
+python -m compileall -q .
 ```
 
----
+For production remote attestation, use a TPM-aware verifier supporting the TCG attestation structure, AK public-key trust, event-log PCR replay and verifier-issued nonce checking.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT — see [LICENSE](LICENSE).
