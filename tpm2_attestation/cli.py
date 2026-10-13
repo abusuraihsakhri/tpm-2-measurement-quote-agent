@@ -11,6 +11,17 @@ from .agents import TPM2Coordinator
 coordinator = TPM2Coordinator()
 
 
+def _parse_bool(value):
+    if isinstance(value, bool):
+        return value
+    normalized = str(value).strip().lower()
+    if normalized in {"true", "1", "yes", "y"}:
+        return True
+    if normalized in {"false", "0", "no", "n", ""}:
+        return False
+    raise ValueError(f"Invalid boolean value: {value!r}")
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="tpm-2-measurement-quote-agent", description="TPM 2.0 PCR Measurement & Remote Quote Attestation Supervisor")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -83,7 +94,7 @@ def main(argv=None):
                 primary_metric=float(r.get("primary_metric", 15.0)),
                 secondary_metric=float(r.get("secondary_metric", 5.0)),
                 status_descriptor=r.get("status_descriptor", "NOMINAL"),
-                is_critical_flag=bool(r.get("is_critical_flag", False)),
+                is_critical_flag=_parse_bool(r.get("is_critical_flag", False)),
             )
             dossier = coordinator.process(payload)
             row_dict = dict(r)

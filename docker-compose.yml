@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   tpm-2-measurement-quote-engine:
     build: .
@@ -7,7 +5,6 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - AUDIT_SECRET_KEY=tpm-2-measurement-quote-engine-prod-audit-key-2026
       - MODEL_PROVIDER=mock
     restart: unless-stopped
     healthcheck:

@@ -34,14 +34,14 @@ class TestPCRBankState:
     def test_extend_sha256(self):
         bank = PCRBankState(PCRBank.SHA256, 24)
         new_val = bank.extend(0, b'test-data')
-        expected = hashlib.sha256(b'\x00' * 32 + b'test-data').digest()
+        expected = hashlib.sha256(b'\x00' * 32 + hashlib.sha256(b'test-data').digest()).digest()
         assert new_val == expected
         assert bank.read(0) == expected
 
     def test_extend_sha1(self):
         bank = PCRBankState(PCRBank.SHA1, 24)
         new_val = bank.extend(0, b'test-data')
-        expected = hashlib.sha1(b'\x00' * 20 + b'test-data').digest()
+        expected = hashlib.sha1(b'\x00' * 20 + hashlib.sha1(b'test-data').digest()).digest()
         assert new_val == expected
 
     def test_extend_chaining(self):
@@ -50,7 +50,7 @@ class TestPCRBankState:
         val_after_first = bank.read(0)
         bank.extend(0, b'second')
         val_after_second = bank.read(0)
-        expected = hashlib.sha256(val_after_first + b'second').digest()
+        expected = hashlib.sha256(val_after_first + hashlib.sha256(b'second').digest()).digest()
         assert val_after_second == expected
         assert val_after_first != val_after_second
 
@@ -387,3 +387,89 @@ class TestSecurityValidation:
         valid, errors = tpm.verify_quote(quote, nonce)
         assert valid is False
         assert any('Signature' in e for e in errors)
+
+
+def test_invalid_extend_does_not_append_event():
+    tpm = TPMSimulator()
+    with pytest.raises(IndexError):
+        tpm.extend_pcr(999, b"invalid")
+    assert tpm.event_log.get_entry_count() == 0
+
+
+def test_quote_rejects_duplicate_indices_and_missing_values():
+    tpm = TPMSimulator()
+    with pytest.raises(ValueError, match="Duplicate"):
+        tpm.generate_quote([0, 0])
+    quote = tpm.generate_quote([0, 1], nonce=b"z" * 16)
+    quote.pcr_values.pop(1)
+    valid, errors = tpm.verify_quote(quote, b"z" * 16)
+    assert not valid and any("PCR" in e for e in errors)
+
+
+def test_quote_rejects_tampered_key_id():
+    tpm = TPMSimulator()
+    quote = tpm.generate_quote([0], nonce=b"z" * 16)
+    quote.attestation_key_id = "DIFFERENT"
+    valid, errors = tpm.verify_quote(quote, b"z" * 16)
+    assert not valid and any("key" in e.lower() for e in errors)
+
+
+def test_cli_quote_verify_across_processes(tmp_path):
+    from cli import main
+    nonce = "ab" * 16
+    key_path = tmp_path / "attestation.key"
+    quote_path = tmp_path / "quote.json"
+    assert main(["quote", "--pcr-indices", "0,7", "--nonce", nonce,
+                 "--key-file", str(key_path), "--output", str(quote_path)]) == 0
+    assert main(["verify", "--input", str(quote_path), "--nonce", nonce,
+                 "--key-file", str(key_path)]) == 0
+    assert main(["verify", "--input", str(quote_path), "--nonce", "cd" * 16,
+                 "--key-file", str(key_path)]) == 1
+    data = json.loads(quote_path.read_text())
+    data["pcr_values"]["0"] = "00" * 32
+    quote_path.write_text(json.dumps(data))
+    assert main(["verify", "--input", str(quote_path), "--nonce", nonce,
+                 "--key-file", str(key_path)]) == 1
+
+
+def test_audit_trail_checks_hmac_and_defensive_copy():
+    from agents.base import AuditTrail
+    trail = AuditTrail(secret_key="test-secret")
+    trail.log("reviewer", "audit", "CHECK", {"status": "OK"})
+    assert trail.verify_integrity()
+    external = trail.get_trail()
+    external[0]["event_type"] = "ALTERED"
+    assert trail.verify_integrity()
+    trail.logs[0]["event_type"] = "ALTERED"
+    assert not trail.verify_integrity()
+
+
+def test_batch_false_is_not_treated_as_true(tmp_path):
+    import csv
+    from tpm2_attestation.cli import main as batch_main
+    source = tmp_path / "sample.csv"
+    target = tmp_path / "out.csv"
+    source.write_text(
+        "task_id,target_identifier,primary_metric,secondary_metric,is_critical_flag,status_descriptor\\n"
+        "T1,ID1,1,1,False,NOMINAL\\n".replace("\\n", "\n")
+    )
+    assert batch_main(["batch", "-i", str(source), "-o", str(target)]) == 0
+    with target.open() as stream:
+        result = next(csv.DictReader(stream))
+    assert result["overall_status"] == "NOMINAL_OPTIMAL"
+
+
+def test_api_smoke():
+    from fastapi.testclient import TestClient
+    from agents.api import app
+    client = TestClient(app)
+    assert client.get("/health").status_code == 200
+    response = client.post("/api/audit", json={
+        "task_id": "T1", "target_identifier": "ID1", "primary_metric": 1,
+        "secondary_metric": 1, "status_descriptor": "NOMINAL"
+    })
+    assert response.status_code == 200
+    assert response.json()["total_alerts"] == 0
+    assert client.post("/api/audit", json={
+        "task_id": "T2", "target_identifier": "ID2", "primary_metric": "NaN"
+    }).status_code == 422
