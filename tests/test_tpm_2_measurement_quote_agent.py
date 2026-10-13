@@ -450,8 +450,8 @@ def test_batch_false_is_not_treated_as_true(tmp_path):
     source = tmp_path / "sample.csv"
     target = tmp_path / "out.csv"
     source.write_text(
-        "task_id,target_identifier,primary_metric,secondary_metric,is_critical_flag,status_descriptor\\n"
-        "T1,ID1,1,1,False,NOMINAL\\n".replace("\\n", "\n")
+        "task_id,target_identifier,primary_metric,secondary_metric,is_critical_flag,status_descriptor\n"
+        "T1,ID1,1,1,False,NOMINAL\n"
     )
     assert batch_main(["batch", "-i", str(source), "-o", str(target)]) == 0
     with target.open() as stream:
