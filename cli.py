@@ -13,13 +13,34 @@ Commands:
 import argparse
 import json
 import sys
+import os
+import secrets
 
-from simulator import TPMSimulator, EventType, PCRBank
+from simulator import TPMSimulator, EventType, PCRBank, AttestationKey
 
 
 def _get_sim(args):
     """Create or load a TPM simulator."""
     return TPMSimulator(num_pcrs=getattr(args, 'pcrs', 24))
+
+
+def _load_key(path, create=False):
+    """Load a local simulation-only HMAC key, or create one with private permissions."""
+    if os.path.islink(path):
+        raise ValueError("Refusing a symbolic-link key file")
+    if create and not os.path.exists(path):
+        key = secrets.token_bytes(32)
+        fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        with os.fdopen(fd, "wb") as f:
+            f.write(key)
+    else:
+        if os.name == "posix" and os.stat(path).st_mode & 0o077:
+            raise ValueError("Key file must not be accessible to group or others (chmod 600)")
+    with open(path, "rb") as f:
+        key = f.read()
+    if len(key) != 32:
+        raise ValueError("Key file must contain exactly 32 raw bytes")
+    return AttestationKey(secret=key)
 
 
 def cmd_extend(args):
@@ -66,6 +87,8 @@ def cmd_read(args):
 def cmd_quote(args):
     """Generate a TPM quote."""
     sim = _get_sim(args)
+    if args.key_file:
+        sim.attestation_key = _load_key(args.key_file, create=True)
 
     # Parse PCR indices
     indices = [int(x) for x in args.pcr_indices.split(',')]
@@ -87,12 +110,15 @@ def cmd_quote(args):
         with open(args.output, 'w') as f:
             json.dump(quote.to_dict(), f, indent=2)
         print(f"  Saved to: {args.output}")
+        if not args.key_file:
+            print("  NOTE: The ephemeral HMAC key was not saved; this quote cannot be verified in another process.")
     return 0
 
 
 def cmd_verify(args):
     """Verify a TPM quote."""
     sim = _get_sim(args)
+    sim.attestation_key = _load_key(args.key_file)
 
     if args.input:
         with open(args.input, 'r') as f:
@@ -112,7 +138,7 @@ def cmd_verify(args):
         print("Error: --input required for verification")
         return 1
 
-    nonce = bytes.fromhex(args.nonce) if args.nonce else quote.nonce
+    nonce = bytes.fromhex(args.nonce)
     valid, errors = sim.verify_quote(quote, nonce)
 
     print(f"Quote Verification:")
@@ -210,12 +236,14 @@ def main(argv=None):
     p.add_argument('--bank', choices=['sha1', 'sha256'], default='sha256')
     p.add_argument('--nonce', type=str, default=None, help='Nonce (hex)')
     p.add_argument('--output', type=str, default=None, help='Output JSON file')
+    p.add_argument('--key-file', help='Private 32-byte HMAC key file (created if absent; simulation only)')
     p.set_defaults(func=cmd_quote)
 
     # verify
     p = sub.add_parser('verify', help='Verify a TPM quote')
     p.add_argument('--input', type=str, required=True, help='Quote JSON file')
-    p.add_argument('--nonce', type=str, default=None, help='Expected nonce (hex)')
+    p.add_argument('--nonce', type=str, required=True, help='Verifier-issued challenge nonce (hex; required)')
+    p.add_argument('--key-file', required=True, help='Existing private HMAC key file for verification')
     p.set_defaults(func=cmd_verify)
 
     # log
@@ -232,7 +260,11 @@ def main(argv=None):
     p.set_defaults(func=cmd_reset)
 
     args = parser.parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except (ValueError, TypeError, KeyError, IndexError, OSError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
 
 
 if __name__ == '__main__':

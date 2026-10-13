@@ -19,9 +19,17 @@ classifiers = [
 requires-python = ">=3.9"
 dependencies = []
 
+[project.optional-dependencies]
+server = ["fastapi>=0.110", "uvicorn>=0.27", "pydantic>=2.5"]
+test = ["pytest>=8", "httpx>=0.27"]
+
+[tool.setuptools]
+packages = ["agents", "tpm2_attestation"]
+py-modules = ["simulator", "cli", "enrichment", "tpm2_attestation_app"]
+
 [project.scripts]
 tpm-2-measurement-quote-engine = "tpm2_attestation.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/abusuraihsakhri/tpm-2-measurement-quote-engine"
-Repository = "https://github.com/abusuraihsakhri/tpm-2-measurement-quote-engine.git"
+Homepage = "https://github.com/abusuraihsakhri/tpm-2-measurement-quote-agent"
+Repository = "https://github.com/abusuraihsakhri/tpm-2-measurement-quote-agent.git"

@@ -1,39 +1,36 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Tpm 2 Measurement Quote Engine API",
-    "description": "Enterprise Distributed Component Platform (Clinical & Cryptographic AI) adhering to CAP / CLSI / NIST Standards.",
-    "version": "3.0.0-ENTERPRISE",
-    "contact": {
-      "name": "Dr. Abu Suraih Sakhri",
-      "url": "https://github.com/abusuraihsakhri"
-    }
+    "title": "TPM 2.0 Measurement Quote Agent — Rule-based Demo API",
+    "description": "Educational in-memory audit API. No hardware TPM quote parsing, signature verification, or TCG/NIST conformance checks are performed.",
+    "version": "3.0.0-ENTERPRISE"
   },
   "paths": {
     "/health": {
       "get": {
-        "summary": "Health and metadata check",
+        "summary": "Service health and demo metadata",
         "responses": {
           "200": {
-            "description": "System optimal"
+            "description": "Healthy service"
           }
         }
       }
     },
     "/metrics": {
       "get": {
-        "summary": "Prometheus operational metrics",
+        "summary": "In-memory JSON counters",
         "responses": {
           "200": {
-            "description": "Prometheus text metrics"
+            "description": "Task and audit log counters"
           }
         }
       }
     },
     "/api/audit": {
       "post": {
-        "summary": "Dispatch task payload across specialized workers",
+        "summary": "Evaluate numeric thresholds and descriptor keywords",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -49,13 +46,19 @@
                     "type": "number"
                   },
                   "secondary_metric": {
-                    "type": "number"
+                    "type": "number",
+                    "default": 0
                   },
                   "status_descriptor": {
-                    "type": "string"
+                    "type": "string",
+                    "default": "NOMINAL"
                   },
                   "is_critical_flag": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "attributes": {
+                    "type": "object"
                   }
                 },
                 "required": [
@@ -69,15 +72,22 @@
         },
         "responses": {
           "200": {
-            "description": "Consensus dossier with HMAC signature"
+            "description": "Demonstration dossier (not a hardware attestation result)"
+          },
+          "400": {
+            "description": "Potential identifier rejected"
+          },
+          "422": {
+            "description": "Input validation error"
           }
         }
       }
     },
     "/api/chat": {
       "post": {
-        "summary": "Air-gapped supervisory conversational assistant",
+        "summary": "Deterministic mock chat",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -96,17 +106,20 @@
         },
         "responses": {
           "200": {
-            "description": "Supervisory response"
+            "description": "Mock chat response"
+          },
+          "400": {
+            "description": "Potential identifier rejected"
           }
         }
       }
     },
     "/api/audit/logs": {
       "get": {
-        "summary": "Retrieve and cryptographically verify HMAC audit trail",
+        "summary": "Inspect and check the process-local audit chain",
         "responses": {
           "200": {
-            "description": "Cryptographic audit trail"
+            "description": "In-memory HMAC audit entries and integrity flag"
           }
         }
       }

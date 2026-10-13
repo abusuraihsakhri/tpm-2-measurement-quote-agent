@@ -1,236 +1,261 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tpm 2 Measurement Quote Engine — Operations Console</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg: #090d16;
-            --card: #111827;
-            --border: #1f293d;
-            --accent: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.25);
-            --text: #f3f4f6;
-            --text-muted: #9ca3af;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --success: #10b981;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            padding: 2rem;
-            min-height: 100vh;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .header-title h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
-        .header-title p { color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem; }
-        .badge {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            background: var(--accent-glow);
-            color: var(--accent);
-            border: 1px solid var(--accent);
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1.2fr;
-            gap: 1.5rem;
-        }
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        }
-        .card h2 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .form-group { margin-bottom: 1rem; }
-        label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem; }
-        input, select, textarea {
-            width: 100%;
-            padding: 0.65rem 0.9rem;
-            background: #0d1322;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: #fff;
-            font-family: inherit;
-            font-size: 0.9rem;
-        }
-        input:focus, textarea:focus { outline: none; border-color: var(--accent); }
-        .btn {
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            padding: 0.7rem 1.4rem;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-            width: 100%;
-        }
-        .btn:hover { background: #2563eb; }
-        .terminal {
-            background: #060911;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            color: #10b981;
-            height: 380px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
-        .metrics-bar {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        .metric-box {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            text-align: center;
-        }
-        .metric-val { font-size: 1.4rem; font-weight: 700; color: #fff; margin-top: 0.25rem; }
-        .metric-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>TPM 2.0 Measurement &amp; Quote Simulator</title>
+  <style>
+    :root { color-scheme: dark; font: 15px/1.5 system-ui, sans-serif; background: #0b1220; color: #e5eaf3; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    main { max-width: 1180px; padding: 28px 18px 60px; margin: auto; }
+    h1 { font-size: clamp(1.45rem, 3vw, 2rem); margin: 0 0 6px; letter-spacing: -.025em; }
+    h2 { font-size: 1.05rem; margin: 0 0 14px; }
+    .muted, small { color: #aebbcf; }
+    .disclaimer { border-left: 3px solid #efbd63; padding: 10px 14px; background: #242017; border-radius: 0 6px 6px 0; margin: 20px 0; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+    .panel { background: #121d30; border: 1px solid #33415b; border-radius: 12px; padding: 20px; min-width: 0; }
+    .row { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
+    .row > .field { flex: 1 1 160px; }
+    .field { margin-bottom: 12px; min-width: 0; }
+    label { display: block; margin: 0 0 5px; font-weight: 600; font-size: .89rem; }
+    input, select, textarea, button { font: inherit; }
+    input, select, textarea { width: 100%; background: #0b1424; border: 1px solid #52617a; color: #f4f6fb; padding: 10px; border-radius: 7px; }
+    input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible { outline: 3px solid #9bc6ff; outline-offset: 2px; }
+    textarea { height: 200px; resize: vertical; font: .78rem/1.55 ui-monospace, monospace; }
+    button { background: #367ac9; border: 1px solid #6b9dd9; border-radius: 7px; color: #fff; padding: 9px 13px; cursor: pointer; font-weight: 650; }
+    button.secondary { background: #25334b; border-color: #5c6b82; }
+    button:hover { filter: brightness(1.15); }
+    button:disabled { opacity: .5; cursor: wait; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+    .stat { margin: 10px 0 14px; color: #9cc6ff; font-weight: 600; }
+    pre { overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: #090f1a; border: 1px solid #293851; border-radius: 8px; padding: 12px; margin: 6px 0 14px; font: .78rem/1.65 ui-monospace, monospace; }
+    .data { min-height: 88px; max-height: 230px; }
+    .message { min-height: 40px; }
+    .error { color: #ffb5a7; }
+    .good { color: #8de3b3; }
+    .footnote { font-size: .85rem; margin-top: 16px; color: #aebbcf; }
+    @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } .panel { padding: 16px; } }
+  </style>
 </head>
 <body>
-
-    <div class="header">
-        <div class="header-title">
-            <h1>Tpm 2 Measurement Quote Engine</h1>
-            <p>Domain: Clinical & Cryptographic AI | Standard: CAP / CLSI / NIST Standards | LabMind-Atlas Architecture</p>
-        </div>
-        <div>
-            <span class="badge">Air-Gapped Active</span>
-            <span class="badge" style="background: rgba(16,185,129,0.2); color: #10b981; border-color: #10b981;">Zero-PHI Guard Active</span>
-        </div>
-    </div>
-
-    <div class="metrics-bar">
-        <div class="metric-box">
-            <div class="metric-label">System Status</div>
-            <div class="metric-val" style="color: var(--success);" id="m-status">OPTIMAL</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">Tasks Processed</div>
-            <div class="metric-val" id="m-tasks">142</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">Audit Blocks Signed</div>
-            <div class="metric-val" id="m-audit">142</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">PHI Interceptions</div>
-            <div class="metric-val" style="color: var(--accent);" id="m-phi">0</div>
-        </div>
-    </div>
-
-    <div class="grid">
-        <div class="card">
-            <h2>⚙️ Dispatch Distributed Component Audit</h2>
-            <div class="form-group">
-                <label>Task / Sample ID</label>
-                <input type="text" id="task_id" value="TASK-2026-LIVE-01">
-            </div>
-            <div class="form-group">
-                <label>Target Identifier</label>
-                <input type="text" id="target_id" value="SPECIMEN-ALPHA-77">
-            </div>
-            <div class="form-group">
-                <label>Primary Measurement / Value</label>
-                <input type="number" id="primary_metric" value="29.4" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Secondary Metric / Kinetic Index</label>
-                <input type="number" id="secondary_metric" value="14.8" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Status / Phenotype Descriptor</label>
-                <input type="text" id="status_descriptor" value="DISCORDANT_ANOMALY">
-            </div>
-            <div class="form-group">
-                <label><input type="checkbox" id="is_critical" checked> Trigger Emergency / Critical Flag</label>
-            </div>
-            <button class="btn" onclick="runAudit()">Execute Distributed Component Audit</button>
-        </div>
-
-        <div class="card">
-            <h2>📊 Real-Time Consensus Dossier & Audit Log</h2>
-            <div class="terminal" id="outputConsole">// Tpm 2 Measurement Quote Engine Operations Console Ready
-// Connection established with Air-Gapped Supervisor
-// Cryptographic HMAC-SHA256 audit ledger loaded.
-// Ready for live task payload dispatch...</div>
-        </div>
-    </div>
-
-    <script>
-        async function runAudit() {
-            const consoleEl = document.getElementById('outputConsole');
-            consoleEl.innerText = "// Dispatching task across specialized workers...
-// Invoking InvariantQCWorker, SafetyEscalationWorker, ProtocolWorker...";
-
-            const payload = {
-                task_id: document.getElementById('task_id').value,
-                target_identifier: document.getElementById('target_id').value,
-                primary_metric: parseFloat(document.getElementById('primary_metric').value),
-                secondary_metric: parseFloat(document.getElementById('secondary_metric').value),
-                status_descriptor: document.getElementById('status_descriptor').value,
-                is_critical_flag: document.getElementById('is_critical').checked
-            };
-
-            try {
-                const res = await fetch('/api/audit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                consoleEl.innerText = JSON.stringify(data, null, 2);
-                document.getElementById('m-tasks').innerText = parseInt(document.getElementById('m-tasks').innerText) + 1;
-                document.getElementById('m-audit').innerText = parseInt(document.getElementById('m-audit').innerText) + 1;
-            } catch (err) {
-                consoleEl.innerText = "// Offline / Simulation Output:\n" + JSON.stringify({
-                    dossier_id: "DOSSIER-SIM-" + Math.floor(Math.random()*10000),
-                    system: "tpm-2-measurement-quote-engine",
-                    domain: "Clinical & Cryptographic AI",
-                    task_id: payload.task_id,
-                    overall_urgency: payload.is_critical_flag ? "CRITICAL_STAT_PANIC" : "ELEVATED_RISK",
-                    integrity_status: "DISCORDANT_ANOMALY",
-                    alerts: [
-                        { worker: "InvariantQCWorker", alert: "Primary metric exceeds upper reference bound" },
-                        { worker: "SafetyEscalationWorker", alert: "Critical emergency interlock flag active" }
-                    ],
-                    audit_hash: "HMAC_SHA256_e83f9a72b941d6c381f9"
-                }, null, 2);
-            }
-        }
-    </script>
+<main>
+  <header>
+    <h1>TPM 2.0 Measurement &amp; Quote Simulator</h1>
+    <p class="muted">An interactive, local-only demonstration of PCR extension, event measurements, and HMAC-based quote checks.</p>
+  </header>
+  <p class="disclaimer"><strong>Educational simulation only.</strong> No hardware TPM, attestation key certification, TPM quote format, or remote-trust verification is implemented. A generated browser HMAC key is usable only in this page session.</p>
+  <div class="layout">
+    <section class="panel" aria-labelledby="measure-heading">
+      <h2 id="measure-heading">PCR measurements</h2>
+      <div class="row">
+        <div class="field"><label for="bank">PCR bank</label><select id="bank"><option value="sha256">SHA-256</option><option value="sha1">SHA-1 (legacy)</option></select></div>
+        <div class="field"><label for="pcr">PCR index (0–23)</label><input id="pcr" type="number" value="0" min="0" max="23" step="1"></div>
+      </div>
+      <div class="field"><label for="measurement">Measurement text</label><input id="measurement" value="firmware-v1" maxlength="4096" autocomplete="off"></div>
+      <div class="actions">
+        <button id="extend">Extend PCR</button>
+        <button class="secondary" id="boot">Simulate UEFI boot</button>
+        <button class="secondary" id="reset">Reset</button>
+      </div>
+      <div class="stat" id="eventCount">0 measurement events</div>
+      <label for="pcrOutput">Current PCR values (selected bank)</label>
+      <pre class="data" id="pcrOutput" aria-label="Current PCR values"></pre>
+      <label for="eventOutput">Measurement event log</label>
+      <pre class="data" id="eventOutput" aria-label="Measurement log"></pre>
+    </section>
+    <section class="panel" aria-labelledby="quote-heading">
+      <h2 id="quote-heading">Generate and verify a simulated quote</h2>
+      <div class="field"><label for="indices">PCR indices (comma-separated)</label><input id="indices" value="0,1,7" autocomplete="off"></div>
+      <div class="field">
+        <label for="challenge">Verifier challenge / expected nonce (hex, at least 16 bytes)</label>
+        <input id="challenge" spellcheck="false" autocomplete="off">
+        <div class="actions"><button class="secondary" id="newNonce">Generate new challenge</button></div>
+      </div>
+      <div class="actions">
+        <button id="quote">Generate quote</button>
+        <button class="secondary" id="verify">Verify quote</button>
+        <button class="secondary" id="download">Download JSON</button>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label for="quoteJson">Quote JSON (editable to test tamper detection)</label>
+        <textarea id="quoteJson" spellcheck="false" placeholder="Generate a quote or paste a quote from this browser session."></textarea>
+      </div>
+      <div class="field"><label for="upload">Load a quote JSON file</label><input id="upload" type="file" accept=".json,application/json"></div>
+      <label for="result">Verification result</label>
+      <pre class="message" id="result" role="status" aria-live="polite">No quote verified yet.</pre>
+      <p class="footnote">Verification requires the active session key, an independently supplied nonce and matching current PCR values. Reloading this page discards the key. All processing stays in your browser; no uploads or backend calls are made.</p>
+    </section>
+  </div>
+</main>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const encoder = new TextEncoder();
+const ZERO = () => ({sha256: Array.from({length:24}, () => new Uint8Array(32)),
+                    sha1: Array.from({length:24}, () => new Uint8Array(20))});
+let pcrs = ZERO();
+let events = [];
+let hmacKey = null;
+const hex = bytes => Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
+function fromHex(value) {
+  if (typeof value !== "string" || value.length % 2 || !/^[0-9a-f]*$/i.test(value))
+    throw new Error("Expected even-length hexadecimal text.");
+  return new Uint8Array(value.match(/../g)?.map(x => parseInt(x, 16)) || []);
+}
+function concat(...arrays) {
+  const out = new Uint8Array(arrays.reduce((n, x) => n + x.length, 0));
+  let pos = 0;
+  for (const x of arrays) { out.set(x, pos); pos += x.length; }
+  return out;
+}
+async function hash(bank, bytes) {
+  return new Uint8Array(await crypto.subtle.digest(bank === "sha1" ? "SHA-1" : "SHA-256", bytes));
+}
+async function measure(index, description) {
+  if (!Number.isInteger(index) || index < 0 || index >= 24) throw new Error("PCR index must be between 0 and 23.");
+  if (!description || description.length > 4096) throw new Error("Enter measurement text (at most 4096 characters).");
+  const payload = encoder.encode(description);
+  const digests = {};
+  for (const bank of ["sha1", "sha256"]) {
+    const measurementDigest = await hash(bank, payload);
+    pcrs[bank][index] = await hash(bank, concat(pcrs[bank][index], measurementDigest));
+    digests[bank] = hex(measurementDigest);
+  }
+  events.push({index, description, digests});
+}
+function parseIndices(value) {
+  const raw = value.split(",").map(x => x.trim());
+  const indices = raw.map(x => /^\d+$/.test(x) ? Number(x) : NaN);
+  if (!indices.length || indices.some(x => !Number.isInteger(x) || x < 0 || x > 23) || new Set(indices).size !== indices.length)
+    throw new Error("Use unique PCR indices in the range 0–23.");
+  return indices;
+}
+function render() {
+  const bank = $("bank").value;
+  const measured = pcrs[bank].map((value, i) => ({value, i})).filter(x => x.value.some(b => b !== 0));
+  $("pcrOutput").textContent = measured.length
+    ? measured.map(x => "PCR[" + x.i + "]  " + hex(x.value)).join("\n")
+    : "All 24 PCRs are zero.";
+  $("eventCount").textContent = events.length + " measurement event" + (events.length === 1 ? "" : "s");
+  $("eventOutput").textContent = events.length
+    ? events.map((e, i) => (i+1) + ". PCR[" + e.index + "] " + e.description + "\n   " + bank + ": " + e.digests[bank]).join("\n")
+    : "No measurement events.";
+}
+function result(message, error=false) {
+  $("result").textContent = message;
+  $("result").className = "message " + (error ? "error" : "good");
+}
+async function key() {
+  if (!hmacKey) hmacKey = await crypto.subtle.generateKey(
+    {name:"HMAC", hash:"SHA-256", length:256}, false, ["sign","verify"]
+  );
+  return hmacKey;
+}
+function challenge() {
+  $("challenge").value = hex(crypto.getRandomValues(new Uint8Array(16)));
+  result("New verifier challenge generated; existing quotes will no longer match.", false);
+}
+function quoteBytes(q) {
+  const parts = [encoder.encode("QUOT"), encoder.encode(q.pcr_bank)];
+  for (const i of [...q.pcr_indices].sort((a,b)=>a-b)) {
+    const index = new Uint8Array(4);
+    new DataView(index.buffer).setUint32(0, i, true);
+    parts.push(index, fromHex(q.pcr_values[String(i)]));
+  }
+  parts.push(fromHex(q.nonce));
+  const separated = [];
+  parts.forEach((p,i) => { if (i) separated.push(new Uint8Array([124])); separated.push(p); });
+  return concat(...separated);
+}
+async function generateQuote() {
+  const indices = parseIndices($("indices").value);
+  const nonce = fromHex($("challenge").value);
+  if (nonce.length < 16) throw new Error("Use a verifier challenge of at least 16 bytes.");
+  const bank = $("bank").value;
+  const quote = {
+    pcr_bank: bank, pcr_indices: indices,
+    pcr_values: Object.fromEntries(indices.map(i => [String(i), hex(pcrs[bank][i])])),
+    nonce: hex(nonce), signature: "", timestamp: Date.now()/1000,
+    attestation_key_id: "BROWSER-DEMO"
+  };
+  quote.signature = hex(new Uint8Array(await crypto.subtle.sign("HMAC", await key(), quoteBytes(quote))));
+  $("quoteJson").value = JSON.stringify(quote, null, 2);
+  result("Quote generated. Verify using the same challenge and session key.");
+}
+async function verifyQuote() {
+  if (!hmacKey) throw new Error("No signing key exists in this session. Generate a quote first.");
+  if ($("quoteJson").value.length > 200000) throw new Error("Quote JSON is too large.");
+  const q = JSON.parse($("quoteJson").value);
+  if (!q || !["sha1","sha256"].includes(q.pcr_bank) || !Array.isArray(q.pcr_indices) ||
+      !q.pcr_indices.length || !q.pcr_indices.every(Number.isInteger) ||
+      q.pcr_indices.some(i => i < 0 || i > 23) || new Set(q.pcr_indices).size !== q.pcr_indices.length)
+    throw new Error("Quote contains an invalid bank or PCR selection.");
+  if (q.attestation_key_id !== "BROWSER-DEMO") throw new Error("Attestation key identifier mismatch.");
+  if (!q.pcr_values || typeof q.pcr_values !== "object" ||
+      Object.keys(q.pcr_values).length !== q.pcr_indices.length)
+    throw new Error("Missing or extra PCR values.");
+  const length = q.pcr_bank === "sha1" ? 20 : 32;
+  for (const i of q.pcr_indices) {
+    const value = fromHex(q.pcr_values[String(i)]);
+    if (value.length !== length) throw new Error("Invalid PCR[" + i + "] digest.");
+  }
+  const nonce = fromHex(q.nonce), expected = fromHex($("challenge").value);
+  if (nonce.length < 16 || expected.length < 16 || hex(nonce) !== hex(expected))
+    throw new Error("Nonce does not match the verifier challenge.");
+  const signature = fromHex(q.signature);
+  if (signature.length !== 32 ||
+      !(await crypto.subtle.verify("HMAC", hmacKey, signature, quoteBytes(q))))
+    throw new Error("HMAC verification failed. The quote may be altered or signed under a different key.");
+  for (const i of q.pcr_indices) {
+    if (q.pcr_values[String(i)].toLowerCase() !== hex(pcrs[q.pcr_bank][i]))
+      throw new Error("PCR[" + i + "] does not match the current simulated PCR state.");
+  }
+  result("PASS — HMAC, expected nonce, structure and selected PCR values match the current session. This is not hardware attestation.");
+}
+async function action(fn) {
+  try { await fn(); } catch (e) { result("FAIL — " + (e?.message || "Unknown error"), true); }
+}
+$("bank").addEventListener("change", render);
+$("extend").addEventListener("click", () => action(async () => {
+  await measure(Number($("pcr").value), $("measurement").value.trim());
+  render(); result("PCR extended in both simulated banks.");
+}));
+$("boot").addEventListener("click", () => action(async () => {
+  const boot = [[0,"SRTM-BIOS-v2.0"],[1,"platform-config-001"],[2,"option-rom-nic-001"],
+                [4,"grub2-2.06"],[7,"secure-boot-enabled-db-001"],[8,"vmlinuz-5.15.0"]];
+  for (const [index, name] of boot) await measure(index,name);
+  render(); result("Six simulated UEFI boot measurements applied.");
+}));
+$("reset").addEventListener("click", () => {
+  pcrs = ZERO(); events = []; $("quoteJson").value = ""; render(); result("PCRs and event log reset.");
+});
+$("newNonce").addEventListener("click", challenge);
+$("quote").addEventListener("click", () => action(generateQuote));
+$("verify").addEventListener("click", () => action(verifyQuote));
+$("download").addEventListener("click", () => action(async () => {
+  const content = $("quoteJson").value;
+  if (!content.trim()) throw new Error("No quote to download.");
+  JSON.parse(content);
+  const url = URL.createObjectURL(new Blob([content], {type:"application/json"}));
+  const link = document.createElement("a"); link.href = url; link.download = "simulated-tpm-quote.json";
+  link.click(); setTimeout(() => URL.revokeObjectURL(url), 0);
+  result("Quote JSON downloaded.");
+}));
+$("upload").addEventListener("change", () => action(async () => {
+  const file = $("upload").files[0];
+  if (!file) return;
+  if (file.size > 200000) throw new Error("File too large (maximum 200 kB).");
+  const text = await file.text(); JSON.parse(text);
+  $("quoteJson").value = text;
+  result("Quote loaded. Verify with the challenge and session key.");
+}));
+if (!globalThis.crypto?.subtle) {
+  result("This browser does not expose Web Crypto. Open the app on HTTPS or localhost.", true);
+  for (const id of ["extend","boot","quote","verify"]) $(id).disabled = true;
+} else { challenge(); }
+render();
+</script>
 </body>
 </html>

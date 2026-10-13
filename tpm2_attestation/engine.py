@@ -1,15 +1,9 @@
-"""
-Core Algorithmic Engine & Cryptographic / Biological Logic for TPM 2.0 PCR Measurement & Remote Quote Attestation Supervisor.
-Domain: Hardware Security
-Standard: TCG TPM 2.0 Library Specification
-"""
-import math
-from typing import Dict, Any, List, Optional
-from .models import FrontierPayload, AgentTelemetryAlert, ExecutionStatus
+"""Illustrative threshold engine; not a TPM 2.0 specification conformance validator."""
+from typing import Dict, Any, Optional
 
 
 class FrontierDomainEngine:
-    STANDARD = "TCG TPM 2.0 Library Specification"
+    STANDARD = "Illustrative threshold rules; no hardware attestation"
     PRIMARY_BOUND = 25.0
     SECONDARY_BOUND = 10.0
 
@@ -18,8 +12,8 @@ class FrontierDomainEngine:
         if value > cls.PRIMARY_BOUND:
             return {
                 "summary": "Primary Domain Boundary Deviation",
-                "details": f"Parameter value ({value:.3f}) exceeds operational threshold ({cls.PRIMARY_BOUND:.1f}) under TCG TPM 2.0 Library Specification.",
-                "remediation": "Engage parameter recalibration and algorithmic verification routine.",
+                "details": f"Parameter value ({value:.3f}) exceeds example threshold ({cls.PRIMARY_BOUND:.1f}); not a TCG threshold.",
+                "remediation": "Review measurement inputs and configured demo threshold.",
             }
         return None
 
@@ -28,8 +22,8 @@ class FrontierDomainEngine:
         if value > cls.SECONDARY_BOUND or is_critical:
             return {
                 "summary": "Critical Domain Condition Triggered",
-                "details": f"Secondary index ({value:.3f}) with CriticalFlag={is_critical} demands prioritized resolution.",
-                "remediation": "Initiate automated fail-safe state machine and telemetry alert dispatch.",
+                "details": f"Secondary index ({value:.3f}) with CriticalFlag={is_critical} exceeded an example rule.",
+                "remediation": "Review example escalation logic; no hardware fail-safe is actuated.",
             }
         return None
 
@@ -38,8 +32,8 @@ class FrontierDomainEngine:
         desc_upper = str(descriptor).upper()
         if any(flag in desc_upper for flag in ["VIOLATION", "DISCORDANT", "ANOMALY", "MUTANT", "LEAK"]):
             return {
-                "summary": "Specification / Protocol Anomaly Identified",
-                "details": f"Telemetry status flag '{descriptor}' violates TCG TPM 2.0 Library Specification conformance matrix.",
-                "remediation": "Execute automated rollback or secondary consensus verification.",
+                "summary": "Example Descriptor Anomaly",
+                "details": f"Telemetry status flag '{descriptor}' matched a keyword. No TCG specification verification was performed.",
+                "remediation": "Review the descriptor and independently validate protocol requirements.",
             }
         return None

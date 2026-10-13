@@ -35,3 +35,6 @@ results.csv
 output.csv
 *.log
 *.json.bak
+
+# Private local signing keys
+*.key

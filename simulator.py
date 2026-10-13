@@ -3,7 +3,7 @@ TPM 2.0 Measurement and Quote Simulator.
 
 Implements realistic simulations of TPM 2.0 concepts:
 - PCR (Platform Configuration Register) simulation
-- PCR extend: PCR[i] = Hash(PCR[i] || event_data)
+- PCR extend: PCR[i] = Hash(PCR[i] || Hash(event_data))
 - SHA-256 and SHA-1 PCR computation
 - Measurement log (event log) with event type, digest, data
 - Quote generation: sign PCR values with attestation key
@@ -139,7 +139,7 @@ class PCRBankState:
     Manages a bank of PCRs for a single hash algorithm.
 
     Each PCR is a hash-width register that starts at all-zeros and
-    is extended by: PCR[i] = Hash(PCR[i] || new_data)
+    is extended by: PCR[i] = Hash(PCR[i] || Hash(measured_data))
     """
 
     def __init__(self, algorithm: PCRBank = PCRBank.SHA256, num_pcrs: int = 24):
@@ -158,14 +158,15 @@ class PCRBankState:
 
     def extend(self, pcr_index: int, data: bytes) -> bytes:
         """
-        Extend a PCR: PCR[i] = Hash(PCR[i] || data).
+        Extend a PCR: PCR[i] = Hash(PCR[i] || Hash(data)).
 
         Returns the new PCR value.
         """
         if not 0 <= pcr_index < self.num_pcrs:
             raise IndexError(f"PCR index {pcr_index} out of range [0, {self.num_pcrs})")
         current = self._pcrs[pcr_index]
-        new_value = self._hash_func(current + data).digest()
+        measurement_digest = self._hash_func(data).digest()
+        new_value = self._hash_func(current + measurement_digest).digest()
         self._pcrs[pcr_index] = new_value
         return new_value
 
@@ -318,6 +319,11 @@ class TPMSimulator:
 
         Returns dict of bank_name -> new_pcr_value.
         """
+        # Validate before logging: a rejected index must not create a phantom event.
+        if not isinstance(pcr_index, int) or isinstance(pcr_index, bool) or not 0 <= pcr_index < self.num_pcrs:
+            raise IndexError(f"PCR index {pcr_index} out of range [0, {self.num_pcrs})")
+        if not isinstance(event_data, bytes):
+            raise TypeError("event_data must be bytes")
         # Add to event log
         self.event_log.add_event(
             pcr_index=pcr_index,
@@ -358,11 +364,13 @@ class TPMSimulator:
         if not pcr_indices:
             raise ValueError("At least one PCR index required for quote")
         for idx in pcr_indices:
-            if not 0 <= idx < self.num_pcrs:
+            if not isinstance(idx, int) or isinstance(idx, bool) or not 0 <= idx < self.num_pcrs:
                 raise IndexError(f"PCR index {idx} out of range [0, {self.num_pcrs})")
+        if len(set(pcr_indices)) != len(pcr_indices):
+            raise ValueError("Duplicate PCR indices are not permitted")
         if nonce is None:
             nonce = secrets.token_bytes(32)
-        if len(nonce) < 16:
+        if not isinstance(nonce, bytes) or len(nonce) < 16:
             raise ValueError("Nonce must be at least 16 bytes for anti-replay security")
 
         pcr_values = self.pcr_banks[bank].read_selected(pcr_indices)
@@ -405,6 +413,28 @@ class TPMSimulator:
         Returns (valid: bool, list of error messages).
         """
         errors = []
+
+        # Reject malformed or ambiguous quote structures before serialization.
+        if quote.pcr_bank not in self.pcr_banks:
+            return False, ["Unknown PCR bank"]
+        indices = quote.pcr_indices
+        if (not isinstance(indices, list) or not indices
+                or any(not isinstance(i, int) or isinstance(i, bool) or not 0 <= i < self.num_pcrs for i in indices)
+                or len(set(indices)) != len(indices)):
+            return False, ["Invalid or duplicate PCR indices"]
+        digest_size = self.pcr_banks[quote.pcr_bank].digest_size
+        if (not isinstance(quote.pcr_values, dict)
+                or set(quote.pcr_values) != set(indices)
+                or any(not isinstance(v, bytes) or len(v) != digest_size for v in quote.pcr_values.values())):
+            return False, ["Missing, extra or invalid PCR digest"]
+        if not isinstance(quote.nonce, bytes) or len(quote.nonce) < 16:
+            return False, ["Invalid quote nonce"]
+        if not isinstance(expected_nonce, bytes) or len(expected_nonce) < 16:
+            return False, ["Invalid expected nonce"]
+        if not isinstance(quote.signature, bytes) or len(quote.signature) != 32:
+            return False, ["Invalid HMAC signature length"]
+        if quote.attestation_key_id != self.attestation_key.key_id:
+            return False, ["Attestation key identifier mismatch"]
 
         # 1. Verify nonce (constant-time comparison to prevent timing attacks)
         if not hmac.compare_digest(quote.nonce, expected_nonce):
